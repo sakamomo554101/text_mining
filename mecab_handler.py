@@ -1,7 +1,7 @@
 import MeCab
 from enum import Enum
-import pandas as pd
 import itertools
+from database import WordDatabase
 
 
 class DataIndex(Enum):
@@ -19,71 +19,11 @@ class MecabHandlerOption:
         self.mecab_option = None
 
 
-class WordDatabase:
-    def __init__(self):
-        self.one_word_count_frame = pd.DataFrame(columns=["word", "count"])
-        self.couple_words_count_frame = pd.DataFrame(columns=["word1", "word2", "count"])
-        pass
-
-    def countup_word_list(self, word_list):
-        # 複数単語を登録する
-        for word in word_list:
-            self.countup_one_word(word)
-
-    def countup_one_word(self, word):
-        db = self.one_word_count_frame
-        extract_frame = db[db["word"] == word]
-
-        row_num = len(extract_frame)
-        if row_num == 0:
-            # 行数が0の場合は新規追加
-            s = pd.Series([word, 1], index=db.columns)
-            self.one_word_count_frame = db.append(s, ignore_index=True)
-        elif row_num == 1:
-            # すでに追加されている場合はcountを+1する
-            db.loc[db["word"] == word, "count"] = db.loc[db["word"] == word, "count"] + 1
-        else:
-            # 重複した単語がある場合は例外対応（TODO）
-            print("{} is duplicated!".format(word))
-
-    def countup_couple_words(self, word1, word2):
-        db = self.couple_words_count_frame
-        extract_frame = db[(db["word1"] == word1) & (db["word2"] == word2)]
-
-        row_num = len(extract_frame)
-        if row_num == 0:
-            # 行数が0の場合は新規追加
-            s = pd.Series([word1, word2, 1], index=db.columns)
-            self.couple_words_count_frame = db.append(s, ignore_index=True)
-        elif row_num == 1:
-            # すでに追加されている場合はcountを+1する
-            # TODO : もうちょっと良い感じに書けないだろうか・・
-            db.loc[(db["word1"] == word1) & (db["word2"] == word2), "count"] \
-                = db.loc[(db["word1"] == word1) & (db["word2"] == word2), "count"] + 1
-        else:
-            # 重複した単語がある場合は例外対応（TODO）
-            print("{}/{} is duplicated!".format(word1, word2))
-
-    def delete_one_word(self, word):
-        # TODO : imp
-        pass
-
-    def delete_couple_words(self, word1, word2):
-        # TODO : imp
-        pass
-
-    def debug_print(self):
-        # dbをprintする
-        print(self.one_word_count_frame)
-        print(self.couple_words_count_frame)
-
-
 class MecabHandler:
     def __init__(self, word_database=WordDatabase(), mecab_handler_option=MecabHandlerOption()):
         option = mecab_handler_option.mecab_option
         self.__tagger = MeCab.Tagger(option) if type(option) == "str" else MeCab.Tagger("")
         self.__word_database = word_database
-        pass
 
     def parse(self, sentence, include_feature_list=None, result_type=MecabResultType.ALL):
         # 形態素解析の実施
@@ -105,17 +45,7 @@ class MecabHandler:
         self.__word_database.debug_print()
 
     def __register_word_db(self, word_list):
-        # 単語の出現数を登録
-        self.__word_database.countup_word_list(word_list)
-
-        # 共起単語（2単語のペア）の出現数を登録
-        word_list = list(set(word_list))  # 重複除外のため、一度setに変換している
-        combination_word_pairs = list(itertools.combinations(word_list, 2))
-        for combination_word_pair in combination_word_pairs:
-            self.__word_database.countup_couple_words(
-                combination_word_pair[0],
-                combination_word_pair[1]
-            )
+        self.__word_database.register_word_list(word_list)
 
     # mecabの解析結果を配列に格納し直す。
     # mecabの解析結果は以下のようなイメージ
