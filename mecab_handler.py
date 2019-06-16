@@ -1,7 +1,7 @@
 import MeCab
 from enum import Enum
-import itertools
 from database import WordDatabase
+import re
 
 
 class DataIndex(Enum):
@@ -17,15 +17,16 @@ class MecabResultType(Enum):
 class MecabHandlerOption:
     def __init__(self):
         self.mecab_option = None
+        self.split_pattern = "[!！。?？]"  # テキストを1文ずつに分割する場合の正規表現パターン
 
 
 class MecabHandler:
     def __init__(self, word_database=WordDatabase(), mecab_handler_option=MecabHandlerOption()):
-        option = mecab_handler_option.mecab_option
-        self.__tagger = MeCab.Tagger(option) if type(option) == "str" else MeCab.Tagger("")
+        self.__option = mecab_handler_option
+        self.__tagger = MeCab.Tagger(self.__option.mecab_option) if type(self.__option.mecab_option) == "str" else MeCab.Tagger("")
         self.__word_database = word_database
 
-    def parse(self, sentence, include_feature_list=None, result_type=MecabResultType.ALL):
+    def __parse(self, sentence, include_feature_list=None, result_type=MecabResultType.ALL):
         # 形態素解析の実施
         result = self.__tagger.parse(sentence)
         result = self.__convert_mecab_result(result,
@@ -33,12 +34,20 @@ class MecabHandler:
                                              result_type=result_type)
         return result
 
-    def parse_and_register(self, sentence):
-        # 形態素解析の実施
-        result = self.parse(sentence, include_feature_list=["名詞"], result_type=MecabResultType.WORD_ONLY)
+    def parse_and_register(self, txt):
+        # テキストを句読点で分割
+        sentences = self.__split_sentence(txt)
 
-        # DBに登録
-        self.__register_word_db(result)
+        # 文章ごとに解析を実施
+        for sentence in sentences:
+            # 形態素解析の実施
+            result = self.__parse(sentence, include_feature_list=["名詞"], result_type=MecabResultType.WORD_ONLY)
+
+            # DBに登録
+            self.__register_word_db(result)
+
+    def get_word_database(self):
+        return self.__word_database
 
     def debug_print(self):
         # DBの中身をprint
@@ -46,6 +55,10 @@ class MecabHandler:
 
     def __register_word_db(self, word_list):
         self.__word_database.register_word_list(word_list)
+
+    def __split_sentence(self, txt):
+        pattern = self.__option.split_pattern
+        return re.split(pattern, txt)
 
     # mecabの解析結果を配列に格納し直す。
     # mecabの解析結果は以下のようなイメージ
