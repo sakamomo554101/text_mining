@@ -32,9 +32,6 @@ class WordDatabase:
                 combination_word_pair[1]
             )
 
-        # jaccard係数をアップデート
-        self.update_jaccard_coefficient()
-
     def countup_word_list(self, word_list):
         # 複数単語を登録する
         for word in word_list:
@@ -79,6 +76,9 @@ class WordDatabase:
 
     def update_jaccard_coefficient(self):
         # 全ての共起単語のjaccard係数をアップデートする
+        row_count = len(self.__couple_words_count_frame)
+        print("## start to update jaccard coefficient. row count is {}... ##".format(row_count))
+
         def update_one_jaccard_coefficient(row):
             db = self.__one_word_count_frame
 

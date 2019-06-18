@@ -17,6 +17,8 @@ class NetworkCreator:
         self.__option = option
 
     def plot_graph(self, word_database, edge_threshold=0.0):
+        print("## start to plot co-occurrence network... ##")
+
         # 単語の一覧から、networkXを初期化
         word_list = word_database.get_word_array().tolist()
         g = nx.Graph()
