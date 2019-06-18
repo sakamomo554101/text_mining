@@ -35,16 +35,24 @@ class MecabHandler:
         return result
 
     def parse_and_register(self, txt):
+        print("## start to parse txt... ##")
+
         # テキストを句読点で分割
         sentences = self.__split_sentence(txt)
+        sentence_count = len(sentences)
 
         # 文章ごとに解析を実施
-        for sentence in sentences:
+        for i, sentence in enumerate(sentences):
+            print("## {}/{} sentence parse start.. ##".format(i+1, sentence_count))
+
             # 形態素解析の実施
             result = self.__parse(sentence, include_feature_list=["名詞"], result_type=MecabResultType.WORD_ONLY)
 
             # DBに登録
             self.__register_word_db(result)
+
+        # 最後のDBをアップデートする
+        self.__word_database.update_jaccard_coefficient()
 
     def get_word_database(self):
         return self.__word_database
